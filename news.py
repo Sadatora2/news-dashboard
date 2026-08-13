@@ -180,7 +180,7 @@ h1{{margin:0;font-size:20px}}
 .tabs{{display:flex;gap:8px;flex-wrap:wrap;padding:12px 20px;background:#fff;border-bottom:1px solid #e2e2e6;position:sticky;top:64px;z-index:9}}
 .tab{{border:1px solid #d0d0d5;background:#fff;border-radius:20px;padding:6px 16px;font-size:14px;cursor:pointer}}
 .tab.active{{background:#0a84ff;color:#fff;border-color:#0a84ff}}
-.panel{{padding:12px 20px;display:grid;gap:10px;max-width:820px;margin:0 auto}}
+.panel{{padding:12px 20px;display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,340px),1fr));gap:12px;max-width:1280px;margin:0 auto}}
 .card{{display:flex;gap:12px;background:#fff;border:1px solid #e2e2e6;border-radius:12px;padding:12px;text-decoration:none;color:inherit}}
 .card:hover{{border-color:#0a84ff}}
 .thumb{{flex:0 0 104px;width:104px;height:78px;border-radius:8px;object-fit:cover;background:#ececf0}}
