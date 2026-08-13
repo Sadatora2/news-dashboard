@@ -77,7 +77,8 @@ def test_collect_aggregates_sorts_and_tags_source():
                       "published": datetime(2026, 8, 1)}], True)
         return ([{"title": "新しい", "link": "l2", "summary": "",
                   "published": datetime(2026, 8, 10)}], True)
-    by_genre, failures = news.collect(feeds, fetcher=fake_fetcher)
+    by_genre, failures = news.collect(feeds, fetcher=fake_fetcher,
+                                      summary_fetcher=lambda *a, **k: "")
     titles = [e["title"] for e in by_genre["国内一般"]]
     assert titles == ["新しい", "古い"]
     assert by_genre["国内一般"][0]["source"] == "S2"
@@ -93,9 +94,62 @@ def test_collect_records_failures_and_caps_20():
     ]}
     def fake_fetcher(url, timeout=10):
         return (many, True) if url == "big" else ([], False)
-    by_genre, failures = news.collect(feeds, fetcher=fake_fetcher)
+    by_genre, failures = news.collect(feeds, fetcher=fake_fetcher,
+                                      summary_fetcher=lambda *a, **k: "")
     assert len(by_genre["IT・AI"]) == 20
     assert "IT・AI/死んでる" in failures
+
+
+# --- 改良: 概要補完(fetch_summary / collect enrichment) ---
+
+def test_extract_meta_description_og():
+    html = ('<html><head>'
+            '<meta property="og:description" content="OGの概要テキスト">'
+            '</head><body></body></html>')
+    assert news._extract_meta_description(html) == "OGの概要テキスト"
+
+
+def test_extract_meta_description_fallback_name():
+    html = ('<html><head>'
+            '<meta name="description" content="name属性の概要">'
+            '</head></html>')
+    assert news._extract_meta_description(html) == "name属性の概要"
+
+
+def test_extract_meta_description_none():
+    html = "<html><head><title>概要なし</title></head></html>"
+    assert news._extract_meta_description(html) == ""
+
+
+def test_fetch_summary_failure_returns_empty(monkeypatch):
+    def boom(*a, **k):
+        raise OSError("down")
+    monkeypatch.setattr(news, "_download", boom)
+    assert news.fetch_summary("http://x.invalid/a") == ""
+
+
+def test_fetch_summary_success(monkeypatch):
+    html = '<meta property="og:description" content="取得した概要">'
+    monkeypatch.setattr(news, "_download", lambda url, timeout: html)
+    assert news.fetch_summary("http://x/a") == "取得した概要"
+
+
+def test_collect_enriches_only_empty_summaries():
+    feeds = {"国内一般": [{"name": "S", "url": "u"}]}
+    def fake_fetcher(url, timeout=10):
+        return ([
+            {"title": "空", "link": "https://ex.com/empty", "summary": "",
+             "published": datetime(2026, 8, 2)},
+            {"title": "有", "link": "https://ex.com/full", "summary": "元の概要",
+             "published": datetime(2026, 8, 1)},
+        ], True)
+    def fake_summary(url, timeout=5):
+        return "補完された概要" if url == "https://ex.com/empty" else "呼ぶな"
+    by_genre, _ = news.collect(feeds, fetcher=fake_fetcher,
+                               summary_fetcher=fake_summary)
+    items = {e["title"]: e["summary"] for e in by_genre["国内一般"]}
+    assert items["空"] == "補完された概要"   # 空は補完される
+    assert items["有"] == "元の概要"         # 既存概要は上書きしない
 
 
 # --- Task 5: render_html ---

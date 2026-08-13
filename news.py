@@ -4,6 +4,7 @@ import re
 import html as _html
 import urllib.request
 import webbrowser
+from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
 
 import feedparser
@@ -58,7 +59,33 @@ def fetch_feed(url: str, timeout: int = 10):
         return ([], False)
 
 
-def collect(feeds: dict, fetcher=fetch_feed):
+def _extract_meta_description(content) -> str:
+    """記事ページのHTMLから og:description / meta description を抜き出す。"""
+    if isinstance(content, bytes):
+        content = content.decode("utf-8", "ignore")
+    patterns = (
+        r'<meta[^>]+property=["\']og:description["\'][^>]+content=["\']([^"\']*)["\']',
+        r'<meta[^>]+content=["\']([^"\']*)["\'][^>]+property=["\']og:description["\']',
+        r'<meta[^>]+name=["\']description["\'][^>]+content=["\']([^"\']*)["\']',
+        r'<meta[^>]+content=["\']([^"\']*)["\'][^>]+name=["\']description["\']',
+    )
+    for p in patterns:
+        m = re.search(p, content, re.IGNORECASE | re.DOTALL)
+        if m and m.group(1).strip():
+            return _clean(m.group(1), 200)
+    return ""
+
+
+def fetch_summary(url: str, timeout: int = 5) -> str:
+    """記事ページを取得して概要を返す。失敗時は空文字。"""
+    try:
+        content = _download(url, timeout)
+        return _extract_meta_description(content)
+    except Exception:
+        return ""
+
+
+def collect(feeds: dict, fetcher=fetch_feed, summary_fetcher=fetch_summary):
     by_genre = {}
     failures = []
     for genre, sources in feeds.items():
@@ -74,6 +101,15 @@ def collect(feeds: dict, fetcher=fetch_feed):
                 items.append(e)
         items.sort(key=lambda e: e["published"] or datetime.min, reverse=True)
         by_genre[genre] = items[:PER_GENRE]
+    # 概要が空の記事だけ、リンク先ページから並列で補完する
+    need = [e for items in by_genre.values() for e in items
+            if not e["summary"].strip() and e.get("link")]
+    if need:
+        with ThreadPoolExecutor(max_workers=8) as ex:
+            results = list(ex.map(lambda e: summary_fetcher(e["link"]), need))
+        for e, s in zip(need, results):
+            if s:
+                e["summary"] = s
     return by_genre, failures
 
 
