@@ -102,7 +102,7 @@ def fetch_page_meta(url: str, timeout: int = 5):
         return ("", "")
 
 
-def collect(feeds: dict, fetcher=fetch_feed, page_fetcher=fetch_page_meta):
+def collect(feeds: dict, fetcher=fetch_feed, page_fetcher=fetch_page_meta, cache=None):
     by_genre = {}
     failures = []
     for genre, sources in feeds.items():
@@ -118,16 +118,23 @@ def collect(feeds: dict, fetcher=fetch_feed, page_fetcher=fetch_page_meta):
                 items.append(e)
         items.sort(key=lambda e: e["published"] or datetime.min, reverse=True)
         by_genre[genre] = items[:PER_GENRE]
-    # 表示する記事ごとにページを1回取得し、画像と(空なら)概要を補完する
+    # 表示する記事ごとにページから概要・画像を補完する(既知URLはキャッシュ利用)
+    if cache is None:
+        cache = {}
     targets = [e for items in by_genre.values() for e in items if e.get("link")]
-    if targets:
-        with ThreadPoolExecutor(max_workers=12) as ex:
-            results = list(ex.map(lambda e: page_fetcher(e["link"]), targets))
-        for e, (summary, image) in zip(targets, results):
-            if image and not e.get("image"):
-                e["image"] = image
-            if summary and not e["summary"].strip():
-                e["summary"] = summary
+    todo = [e for e in targets if e["link"] not in cache]
+    if todo:
+        with ThreadPoolExecutor(max_workers=24) as ex:
+            results = list(ex.map(lambda e: page_fetcher(e["link"]), todo))
+        for e, res in zip(todo, results):
+            if res != ("", ""):          # 失敗は保存せず次回再取得
+                cache[e["link"]] = res
+    for e in targets:
+        summary, image = cache.get(e["link"], ("", ""))
+        if image and not e.get("image"):
+            e["image"] = image
+        if summary and not e["summary"].strip():
+            e["summary"] = summary
     return by_genre, failures
 
 
@@ -209,10 +216,31 @@ show(0);
 </script></body></html>"""
 
 
+def _load_cache(path):
+    try:
+        with open(path, encoding="utf-8") as f:
+            return {k: tuple(v) for k, v in json.load(f).items()}
+    except Exception:
+        return {}
+
+
+def _save_cache(path, cache, keep_links):
+    trimmed = {k: list(v) for k, v in cache.items() if k in keep_links}
+    try:
+        with open(path, "w", encoding="utf-8") as f:
+            json.dump(trimmed, f, ensure_ascii=False)
+    except Exception:
+        pass
+
+
 def main():
     here = os.path.dirname(os.path.abspath(__file__))
     feeds = load_feeds(os.path.join(here, "feeds.json"))
-    by_genre, failures = collect(feeds)
+    cache_path = os.path.join(here, "cache.json")
+    cache = _load_cache(cache_path)
+    by_genre, failures = collect(feeds, cache=cache)
+    keep = {e["link"] for items in by_genre.values() for e in items if e.get("link")}
+    _save_cache(cache_path, cache, keep)
     hml = render_html(by_genre, failures, datetime.now())
     out = os.path.join(here, "news.html")
     with open(out, "w", encoding="utf-8") as f:

@@ -2,18 +2,42 @@
   "国内一般": [
     {"name": "NHK主要", "url": "https://www3.nhk.or.jp/rss/news/cat0.xml"},
     {"name": "NHK社会", "url": "https://www3.nhk.or.jp/rss/news/cat1.xml"},
-    {"name": "Yahoo主要", "url": "https://news.yahoo.co.jp/rss/topics/top-picks.xml"}
+    {"name": "Yahoo主要", "url": "https://news.yahoo.co.jp/rss/topics/top-picks.xml"},
+    {"name": "朝日新聞", "url": "https://www.asahi.com/rss/asahi/newsheadlines.rdf"}
+  ],
+  "経済・ビジネス": [
+    {"name": "NHK経済", "url": "https://www3.nhk.or.jp/rss/news/cat5.xml"},
+    {"name": "Yahoo経済", "url": "https://news.yahoo.co.jp/rss/topics/business.xml"},
+    {"name": "ITmediaビジネス", "url": "https://rss.itmedia.co.jp/rss/2.0/business.xml"},
+    {"name": "東洋経済", "url": "https://toyokeizai.net/list/feed/rss"}
   ],
   "IT・AI": [
     {"name": "ITmedia総合", "url": "https://rss.itmedia.co.jp/rss/2.0/itmedia_all.xml"},
     {"name": "ITmedia AI+", "url": "https://rss.itmedia.co.jp/rss/2.0/aiplus.xml"},
     {"name": "Publickey", "url": "https://www.publickey1.jp/atom.xml"},
     {"name": "GIGAZINE", "url": "https://gigazine.net/news/rss_2.0/"},
-    {"name": "はてブIT", "url": "https://b.hatena.ne.jp/hotentry/it.rss"}
+    {"name": "はてブIT", "url": "https://b.hatena.ne.jp/hotentry/it.rss"},
+    {"name": "CNET Japan", "url": "https://feeds.japan.cnet.com/rss/cnet/all.rdf"},
+    {"name": "INTERNET Watch", "url": "https://internet.watch.impress.co.jp/data/rss/1.0/iw/feed.rdf"},
+    {"name": "ZDNet Japan", "url": "https://feeds.japan.zdnet.com/rss/zdnet/all.rdf"}
   ],
   "スポーツ": [
     {"name": "NHKスポーツ", "url": "https://www3.nhk.or.jp/rss/news/cat7.xml"},
-    {"name": "Yahooスポーツ", "url": "https://news.yahoo.co.jp/rss/topics/sports.xml"}
+    {"name": "Yahooスポーツ", "url": "https://news.yahoo.co.jp/rss/topics/sports.xml"},
+    {"name": "ゲキサカ", "url": "https://web.gekisaka.jp/feed"},
+    {"name": "Full-Count", "url": "https://full-count.jp/feed/"}
+  ],
+  "エンタメ・芸能": [
+    {"name": "Yahooエンタメ", "url": "https://news.yahoo.co.jp/rss/topics/entertainment.xml"},
+    {"name": "音楽ナタリー", "url": "https://natalie.mu/music/feed/news"},
+    {"name": "映画ナタリー", "url": "https://natalie.mu/eiga/feed/news"}
+  ],
+  "ゲーム・アニメ": [
+    {"name": "4Gamer", "url": "https://www.4gamer.net/rss/index.xml"},
+    {"name": "GAME Watch", "url": "https://game.watch.impress.co.jp/data/rss/1.0/gmw/feed.rdf"},
+    {"name": "アニメ!アニメ!", "url": "https://animeanime.jp/rss/index.rdf"},
+    {"name": "コミックナタリー", "url": "https://natalie.mu/comic/feed/news"},
+    {"name": "IGN Japan", "url": "https://jp.ign.com/feed.xml"}
   ],
   "海外・国際": [
     {"name": "NHK国際", "url": "https://www3.nhk.or.jp/rss/news/cat6.xml"},

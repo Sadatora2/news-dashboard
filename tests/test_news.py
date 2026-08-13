@@ -164,6 +164,24 @@ def test_collect_fills_image_and_empty_summary():
     assert items["既概要"]["image"] == "https://ex.com/pic.jpg"
 
 
+def test_collect_uses_cache_and_skips_fetch():
+    feeds = {"国内一般": [{"name": "S", "url": "u"}]}
+    def fake_fetcher(url, timeout=10):
+        return ([{"title": "記事", "link": "https://ex.com/a", "summary": "",
+                  "published": datetime(2026, 8, 1), "image": ""}], True)
+    calls = []
+    def counting_page(url, timeout=5):
+        calls.append(url)
+        return ("新規", "https://ex.com/new.jpg")
+    cache = {"https://ex.com/a": ("キャッシュ概要", "https://ex.com/cached.jpg")}
+    by_genre, _ = news.collect(feeds, fetcher=fake_fetcher,
+                               page_fetcher=counting_page, cache=cache)
+    e = by_genre["国内一般"][0]
+    assert calls == []                                  # 取得は呼ばれない
+    assert e["summary"] == "キャッシュ概要"              # キャッシュから補完
+    assert e["image"] == "https://ex.com/cached.jpg"
+
+
 # --- Task 5: render_html ---
 
 def test_render_html_contains_core_elements():
