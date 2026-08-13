@@ -78,7 +78,7 @@ def test_collect_aggregates_sorts_and_tags_source():
         return ([{"title": "新しい", "link": "l2", "summary": "",
                   "published": datetime(2026, 8, 10)}], True)
     by_genre, failures = news.collect(feeds, fetcher=fake_fetcher,
-                                      summary_fetcher=lambda *a, **k: "")
+                                      page_fetcher=lambda *a, **k: ("", ""))
     titles = [e["title"] for e in by_genre["国内一般"]]
     assert titles == ["新しい", "古い"]
     assert by_genre["国内一般"][0]["source"] == "S2"
@@ -95,12 +95,12 @@ def test_collect_records_failures_and_caps_20():
     def fake_fetcher(url, timeout=10):
         return (many, True) if url == "big" else ([], False)
     by_genre, failures = news.collect(feeds, fetcher=fake_fetcher,
-                                      summary_fetcher=lambda *a, **k: "")
+                                      page_fetcher=lambda *a, **k: ("", ""))
     assert len(by_genre["IT・AI"]) == 20
     assert "IT・AI/死んでる" in failures
 
 
-# --- 改良: 概要補完(fetch_summary / collect enrichment) ---
+# --- 改良: 概要+サムネイル補完(fetch_page_meta / collect enrichment) ---
 
 def test_extract_meta_description_og():
     html = ('<html><head>'
@@ -121,35 +121,47 @@ def test_extract_meta_description_none():
     assert news._extract_meta_description(html) == ""
 
 
-def test_fetch_summary_failure_returns_empty(monkeypatch):
+def test_extract_og_image():
+    html = '<meta property="og:image" content="https://ex.com/pic.jpg">'
+    assert news._extract_og_image(html) == "https://ex.com/pic.jpg"
+
+
+def test_extract_og_image_none():
+    html = "<html><head><title>画像なし</title></head></html>"
+    assert news._extract_og_image(html) == ""
+
+
+def test_fetch_page_meta_failure_returns_empty(monkeypatch):
     def boom(*a, **k):
         raise OSError("down")
     monkeypatch.setattr(news, "_download", boom)
-    assert news.fetch_summary("http://x.invalid/a") == ""
+    assert news.fetch_page_meta("http://x.invalid/a") == ("", "")
 
 
-def test_fetch_summary_success(monkeypatch):
-    html = '<meta property="og:description" content="取得した概要">'
+def test_fetch_page_meta_success(monkeypatch):
+    html = ('<meta property="og:description" content="取得した概要">'
+            '<meta property="og:image" content="https://ex.com/a.jpg">')
     monkeypatch.setattr(news, "_download", lambda url, timeout: html)
-    assert news.fetch_summary("http://x/a") == "取得した概要"
+    assert news.fetch_page_meta("http://x/a") == ("取得した概要", "https://ex.com/a.jpg")
 
 
-def test_collect_enriches_only_empty_summaries():
+def test_collect_fills_image_and_empty_summary():
     feeds = {"国内一般": [{"name": "S", "url": "u"}]}
     def fake_fetcher(url, timeout=10):
         return ([
-            {"title": "空", "link": "https://ex.com/empty", "summary": "",
-             "published": datetime(2026, 8, 2)},
-            {"title": "有", "link": "https://ex.com/full", "summary": "元の概要",
-             "published": datetime(2026, 8, 1)},
+            {"title": "空概要", "link": "https://ex.com/empty", "summary": "",
+             "published": datetime(2026, 8, 2), "image": ""},
+            {"title": "既概要", "link": "https://ex.com/full", "summary": "元の概要",
+             "published": datetime(2026, 8, 1), "image": ""},
         ], True)
-    def fake_summary(url, timeout=5):
-        return "補完された概要" if url == "https://ex.com/empty" else "呼ぶな"
-    by_genre, _ = news.collect(feeds, fetcher=fake_fetcher,
-                               summary_fetcher=fake_summary)
-    items = {e["title"]: e["summary"] for e in by_genre["国内一般"]}
-    assert items["空"] == "補完された概要"   # 空は補完される
-    assert items["有"] == "元の概要"         # 既存概要は上書きしない
+    def fake_page(url, timeout=5):
+        return ("補完概要", "https://ex.com/pic.jpg")
+    by_genre, _ = news.collect(feeds, fetcher=fake_fetcher, page_fetcher=fake_page)
+    items = {e["title"]: e for e in by_genre["国内一般"]}
+    assert items["空概要"]["summary"] == "補完概要"   # 空は補完
+    assert items["既概要"]["summary"] == "元の概要"   # 既存は保持
+    assert items["空概要"]["image"] == "https://ex.com/pic.jpg"  # 画像は付与
+    assert items["既概要"]["image"] == "https://ex.com/pic.jpg"
 
 
 # --- Task 5: render_html ---

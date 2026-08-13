@@ -40,6 +40,7 @@ def parse_entries(content) -> list:
             "link": e.get("link", ""),
             "summary": _clean(e.get("summary", ""), 200),
             "published": _to_dt(e),
+            "image": "",
         })
     return out
 
@@ -59,33 +60,49 @@ def fetch_feed(url: str, timeout: int = 10):
         return ([], False)
 
 
-def _extract_meta_description(content) -> str:
-    """記事ページのHTMLから og:description / meta description を抜き出す。"""
+def _meta_content(content, key_attr, key_val) -> str:
+    """<meta {key_attr}="{key_val}" content="..."> の content を返す(属性順は両対応)。"""
     if isinstance(content, bytes):
         content = content.decode("utf-8", "ignore")
     patterns = (
-        r'<meta[^>]+property=["\']og:description["\'][^>]+content=["\']([^"\']*)["\']',
-        r'<meta[^>]+content=["\']([^"\']*)["\'][^>]+property=["\']og:description["\']',
-        r'<meta[^>]+name=["\']description["\'][^>]+content=["\']([^"\']*)["\']',
-        r'<meta[^>]+content=["\']([^"\']*)["\'][^>]+name=["\']description["\']',
+        rf'<meta[^>]+{key_attr}=["\']{key_val}["\'][^>]+content=["\']([^"\']*)["\']',
+        rf'<meta[^>]+content=["\']([^"\']*)["\'][^>]+{key_attr}=["\']{key_val}["\']',
     )
     for p in patterns:
         m = re.search(p, content, re.IGNORECASE | re.DOTALL)
         if m and m.group(1).strip():
-            return _clean(m.group(1), 200)
+            return m.group(1).strip()
     return ""
 
 
-def fetch_summary(url: str, timeout: int = 5) -> str:
-    """記事ページを取得して概要を返す。失敗時は空文字。"""
+def _extract_meta_description(content) -> str:
+    """og:description → meta description の順で概要を抜き出す。"""
+    for attr, val in (("property", "og:description"), ("name", "description")):
+        s = _meta_content(content, attr, val)
+        if s:
+            return _clean(s, 200)
+    return ""
+
+
+def _extract_og_image(content) -> str:
+    """og:image → twitter:image の順でサムネイル画像URLを抜き出す。"""
+    for attr, val in (("property", "og:image"), ("name", "twitter:image")):
+        s = _meta_content(content, attr, val)
+        if s:
+            return _html.unescape(s)
+    return ""
+
+
+def fetch_page_meta(url: str, timeout: int = 5):
+    """記事ページを取得して (概要, 画像URL) を返す。失敗時は ("", "")。"""
     try:
         content = _download(url, timeout)
-        return _extract_meta_description(content)
+        return (_extract_meta_description(content), _extract_og_image(content))
     except Exception:
-        return ""
+        return ("", "")
 
 
-def collect(feeds: dict, fetcher=fetch_feed, summary_fetcher=fetch_summary):
+def collect(feeds: dict, fetcher=fetch_feed, page_fetcher=fetch_page_meta):
     by_genre = {}
     failures = []
     for genre, sources in feeds.items():
@@ -101,15 +118,16 @@ def collect(feeds: dict, fetcher=fetch_feed, summary_fetcher=fetch_summary):
                 items.append(e)
         items.sort(key=lambda e: e["published"] or datetime.min, reverse=True)
         by_genre[genre] = items[:PER_GENRE]
-    # 概要が空の記事だけ、リンク先ページから並列で補完する
-    need = [e for items in by_genre.values() for e in items
-            if not e["summary"].strip() and e.get("link")]
-    if need:
-        with ThreadPoolExecutor(max_workers=8) as ex:
-            results = list(ex.map(lambda e: summary_fetcher(e["link"]), need))
-        for e, s in zip(need, results):
-            if s:
-                e["summary"] = s
+    # 表示する記事ごとにページを1回取得し、画像と(空なら)概要を補完する
+    targets = [e for items in by_genre.values() for e in items if e.get("link")]
+    if targets:
+        with ThreadPoolExecutor(max_workers=12) as ex:
+            results = list(ex.map(lambda e: page_fetcher(e["link"]), targets))
+        for e, (summary, image) in zip(targets, results):
+            if image and not e.get("image"):
+                e["image"] = image
+            if summary and not e["summary"].strip():
+                e["summary"] = summary
     return by_genre, failures
 
 
@@ -128,13 +146,17 @@ def render_html(by_genre: dict, failures: list, updated_at) -> str:
     for i, g in enumerate(genres):
         cards = []
         for e in by_genre[g]:
+            img = e.get("image", "")
+            thumb = (f'<img class="thumb" src="{esc(img)}" loading="lazy" alt="">'
+                     if img else '<div class="thumb ph"></div>')
             cards.append(
                 '<a class="card" href="{link}" target="_blank" rel="noopener">'
-                '<div class="ctitle">{title}</div>'
+                '{thumb}'
+                '<div class="body"><div class="ctitle">{title}</div>'
                 '<div class="meta"><span class="src">{src}</span>'
                 '<span class="time">{time}</span></div>'
-                '<div class="sum">{sum}</div></a>'.format(
-                    link=esc(e["link"]), title=esc(e["title"]),
+                '<div class="sum">{sum}</div></div></a>'.format(
+                    link=esc(e["link"]), thumb=thumb, title=esc(e["title"]),
                     src=esc(e["source"]), time=esc(_fmt_time(e["published"])),
                     sum=esc(e["summary"]),
                 )
@@ -159,8 +181,11 @@ h1{{margin:0;font-size:20px}}
 .tab{{border:1px solid #d0d0d5;background:#fff;border-radius:20px;padding:6px 16px;font-size:14px;cursor:pointer}}
 .tab.active{{background:#0a84ff;color:#fff;border-color:#0a84ff}}
 .panel{{padding:12px 20px;display:grid;gap:10px;max-width:820px;margin:0 auto}}
-.card{{display:block;background:#fff;border:1px solid #e2e2e6;border-radius:12px;padding:14px 16px;text-decoration:none;color:inherit}}
+.card{{display:flex;gap:12px;background:#fff;border:1px solid #e2e2e6;border-radius:12px;padding:12px;text-decoration:none;color:inherit}}
 .card:hover{{border-color:#0a84ff}}
+.thumb{{flex:0 0 104px;width:104px;height:78px;border-radius:8px;object-fit:cover;background:#ececf0}}
+.thumb.ph{{display:flex}}
+.body{{min-width:0;flex:1}}
 .ctitle{{font-size:16px;font-weight:600;line-height:1.4}}
 .meta{{display:flex;gap:10px;font-size:12px;color:#888;margin:6px 0}}
 .src{{color:#0a84ff}}
@@ -169,7 +194,7 @@ h1{{margin:0;font-size:20px}}
 @media(prefers-color-scheme:dark){{
 body{{background:#000;color:#eee}}header,.tabs{{background:#1c1c1e;border-color:#333}}
 .tab{{background:#1c1c1e;color:#eee;border-color:#444}}.card{{background:#1c1c1e;border-color:#333}}
-.sum{{color:#aaa}}}}
+.thumb{{background:#2c2c2e}}.sum{{color:#aaa}}}}
 </style></head><body>
 <header><h1>毎日ニュース</h1><div class="updated">最終更新: {updated_at.strftime('%Y-%m-%d %H:%M')}</div></header>
 <div class="tabs">{tabs}</div>
