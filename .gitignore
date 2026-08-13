@@ -1,0 +1,5 @@
+news.html
+__pycache__/
+*.pyc
+.token_cache.json
+.env

@@ -1,0 +1,22 @@
+{
+  "国内一般": [
+    {"name": "NHK主要", "url": "https://www3.nhk.or.jp/rss/news/cat0.xml"},
+    {"name": "NHK社会", "url": "https://www3.nhk.or.jp/rss/news/cat1.xml"},
+    {"name": "Yahoo主要", "url": "https://news.yahoo.co.jp/rss/topics/top-picks.xml"}
+  ],
+  "IT・AI": [
+    {"name": "ITmedia総合", "url": "https://rss.itmedia.co.jp/rss/2.0/itmedia_all.xml"},
+    {"name": "ITmedia AI+", "url": "https://rss.itmedia.co.jp/rss/2.0/aiplus.xml"},
+    {"name": "Publickey", "url": "https://www.publickey1.jp/atom.xml"},
+    {"name": "GIGAZINE", "url": "https://gigazine.net/news/rss_2.0/"},
+    {"name": "はてブIT", "url": "https://b.hatena.ne.jp/hotentry/it.rss"}
+  ],
+  "スポーツ": [
+    {"name": "NHKスポーツ", "url": "https://www3.nhk.or.jp/rss/news/cat7.xml"},
+    {"name": "Yahooスポーツ", "url": "https://news.yahoo.co.jp/rss/topics/sports.xml"}
+  ],
+  "海外・国際": [
+    {"name": "NHK国際", "url": "https://www3.nhk.or.jp/rss/news/cat6.xml"},
+    {"name": "Yahoo国際", "url": "https://news.yahoo.co.jp/rss/topics/world.xml"}
+  ]
+}
