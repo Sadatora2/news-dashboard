@@ -9,7 +9,7 @@ from datetime import datetime, timedelta, timezone
 
 import feedparser
 
-PER_GENRE = 20
+PER_GENRE = 30
 _UA = "Mozilla/5.0 (news-dashboard)"
 
 

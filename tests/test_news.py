@@ -85,9 +85,10 @@ def test_collect_aggregates_sorts_and_tags_source():
     assert failures == []
 
 
-def test_collect_records_failures_and_caps_20():
+def test_collect_records_failures_and_caps_per_genre():
+    n = news.PER_GENRE
     many = [{"title": f"t{i}", "link": f"l{i}", "summary": "",
-             "published": datetime(2026, 8, i % 28 + 1)} for i in range(25)]
+             "published": datetime(2026, 8, i % 28 + 1)} for i in range(n + 10)]
     feeds = {"IT・AI": [
         {"name": "多い", "url": "big"},
         {"name": "死んでる", "url": "dead"},
@@ -96,7 +97,7 @@ def test_collect_records_failures_and_caps_20():
         return (many, True) if url == "big" else ([], False)
     by_genre, failures = news.collect(feeds, fetcher=fake_fetcher,
                                       page_fetcher=lambda *a, **k: ("", ""))
-    assert len(by_genre["IT・AI"]) == 20
+    assert len(by_genre["IT・AI"]) == news.PER_GENRE
     assert "IT・AI/死んでる" in failures
 
 
@@ -166,8 +167,10 @@ def test_collect_fills_image_and_empty_summary():
 
 def test_collect_diversifies_sources():
     # A が新着大量、B は少数。多様化で少数ソースBも埋もれず全部入る
+    n = news.PER_GENRE
     a = [{"title": f"a{i}", "link": f"la{i}", "summary": "x",
-          "published": datetime(2026, 8, 20, 12, i), "image": ""} for i in range(20)]
+          "published": datetime(2026, 8, 20, 12, i % 60), "image": ""}
+         for i in range(n + 20)]
     b = [{"title": f"b{i}", "link": f"lb{i}", "summary": "x",
           "published": datetime(2026, 8, 19, 12, i), "image": ""} for i in range(5)]
     feeds = {"スポーツ": [{"name": "A", "url": "ua"}, {"name": "B", "url": "ub"}]}
@@ -176,9 +179,9 @@ def test_collect_diversifies_sources():
     by_genre, _ = news.collect(feeds, fetcher=fake_fetcher,
                                page_fetcher=lambda *x, **k: ("", ""))
     srcs = [e["source"] for e in by_genre["スポーツ"]]
-    assert len(by_genre["スポーツ"]) == 20
-    assert srcs.count("B") == 5      # 少数ソースも全件採用される
-    assert srcs.count("A") == 15
+    assert len(by_genre["スポーツ"]) == n
+    assert srcs.count("B") == 5          # 少数ソースも全件採用される
+    assert srcs.count("A") == n - 5
 
 
 def test_collect_uses_cache_and_skips_fetch():
