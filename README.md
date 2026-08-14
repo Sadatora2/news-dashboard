@@ -14,7 +14,7 @@
 
 ## クラウド自動更新(GitHub Pages)
 
-`.github/workflows/deploy.yml` で毎日 6:00 / 12:00 / 18:00(JST)に自動生成し、GitHub Pages に公開する。
+`.github/workflows/deploy.yml` で日中(JST 7:00〜23:00)に毎時自動生成し、GitHub Pages に公開する。
 PCが起動していなくても更新される。公開URL:
 
 - https://sadatora2.github.io/news-dashboard/
