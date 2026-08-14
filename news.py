@@ -103,6 +103,28 @@ def fetch_page_meta(url: str, timeout: int = 5):
         return ("", "")
 
 
+def _diversify(items, limit):
+    """新しい順を基本にしつつ、1ソースの独占を避けて上位 limit 件を選ぶ。"""
+    ordered = sorted(items, key=lambda e: e["published"] or datetime.min, reverse=True)
+    n_src = len({e["source"] for e in ordered}) or 1
+    cap = max(3, -(-limit // n_src))   # ソースごとの上限(limit/ソース数の切り上げ)
+    counts, chosen, chosen_ids = {}, [], set()
+    for e in ordered:                  # 1巡目: ソース上限まで新しい順に採用
+        if len(chosen) >= limit:
+            break
+        if counts.get(e["source"], 0) < cap:
+            counts[e["source"]] = counts.get(e["source"], 0) + 1
+            chosen.append(e)
+            chosen_ids.add(id(e))
+    for e in ordered:                  # 2巡目: 埋め足りなければ残りを新しい順で補充
+        if len(chosen) >= limit:
+            break
+        if id(e) not in chosen_ids:
+            chosen.append(e)
+    chosen.sort(key=lambda e: e["published"] or datetime.min, reverse=True)
+    return chosen
+
+
 def collect(feeds: dict, fetcher=fetch_feed, page_fetcher=fetch_page_meta, cache=None):
     by_genre = {}
     failures = []
@@ -117,8 +139,7 @@ def collect(feeds: dict, fetcher=fetch_feed, page_fetcher=fetch_page_meta, cache
                 e = dict(e)
                 e["source"] = src["name"]
                 items.append(e)
-        items.sort(key=lambda e: e["published"] or datetime.min, reverse=True)
-        by_genre[genre] = items[:PER_GENRE]
+        by_genre[genre] = _diversify(items, PER_GENRE)
     # 表示する記事ごとにページから概要・画像を補完する(既知URLはキャッシュ利用)
     if cache is None:
         cache = {}

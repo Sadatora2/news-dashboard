@@ -164,6 +164,23 @@ def test_collect_fills_image_and_empty_summary():
     assert items["既概要"]["image"] == "https://ex.com/pic.jpg"
 
 
+def test_collect_diversifies_sources():
+    # A が新着大量、B は少数。多様化で少数ソースBも埋もれず全部入る
+    a = [{"title": f"a{i}", "link": f"la{i}", "summary": "x",
+          "published": datetime(2026, 8, 20, 12, i), "image": ""} for i in range(20)]
+    b = [{"title": f"b{i}", "link": f"lb{i}", "summary": "x",
+          "published": datetime(2026, 8, 19, 12, i), "image": ""} for i in range(5)]
+    feeds = {"スポーツ": [{"name": "A", "url": "ua"}, {"name": "B", "url": "ub"}]}
+    def fake_fetcher(url, timeout=10):
+        return (a, True) if url == "ua" else (b, True)
+    by_genre, _ = news.collect(feeds, fetcher=fake_fetcher,
+                               page_fetcher=lambda *x, **k: ("", ""))
+    srcs = [e["source"] for e in by_genre["スポーツ"]]
+    assert len(by_genre["スポーツ"]) == 20
+    assert srcs.count("B") == 5      # 少数ソースも全件採用される
+    assert srcs.count("A") == 15
+
+
 def test_collect_uses_cache_and_skips_fetch():
     feeds = {"国内一般": [{"name": "S", "url": "u"}]}
     def fake_fetcher(url, timeout=10):

@@ -25,12 +25,20 @@
     {"name": "NHKスポーツ", "url": "https://www3.nhk.or.jp/rss/news/cat7.xml"},
     {"name": "Yahooスポーツ", "url": "https://news.yahoo.co.jp/rss/topics/sports.xml"},
     {"name": "ゲキサカ", "url": "https://web.gekisaka.jp/feed"},
-    {"name": "Full-Count", "url": "https://full-count.jp/feed/"}
+    {"name": "サッカーキング", "url": "https://www.soccer-king.jp/feed"},
+    {"name": "Full-Count", "url": "https://full-count.jp/feed/"},
+    {"name": "Baseball King", "url": "https://baseballking.jp/feed"},
+    {"name": "バスケットボールキング", "url": "https://basketballking.jp/feed"},
+    {"name": "REAL SPORTS", "url": "https://real-sports.jp/feed"}
   ],
   "エンタメ・芸能": [
     {"name": "Yahooエンタメ", "url": "https://news.yahoo.co.jp/rss/topics/entertainment.xml"},
+    {"name": "ENCOUNT", "url": "https://encount.press/feed/"},
     {"name": "音楽ナタリー", "url": "https://natalie.mu/music/feed/news"},
-    {"name": "映画ナタリー", "url": "https://natalie.mu/eiga/feed/news"}
+    {"name": "映画ナタリー", "url": "https://natalie.mu/eiga/feed/news"},
+    {"name": "お笑いナタリー", "url": "https://natalie.mu/owarai/feed/news"},
+    {"name": "ステージナタリー", "url": "https://natalie.mu/stage/feed/news"},
+    {"name": "マグミクス", "url": "https://magmix.jp/feed"}
   ],
   "ゲーム・アニメ": [
     {"name": "4Gamer", "url": "https://www.4gamer.net/rss/index.xml"},
