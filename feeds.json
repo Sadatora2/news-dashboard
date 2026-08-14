@@ -33,6 +33,8 @@
   ],
   "エンタメ・芸能": [
     {"name": "Yahooエンタメ", "url": "https://news.yahoo.co.jp/rss/topics/entertainment.xml"},
+    {"name": "livedoorエンタメ", "url": "https://news.livedoor.com/topics/rss/ent.xml"},
+    {"name": "RBB TODAY", "url": "https://www.rbbtoday.com/rss/index.rdf"},
     {"name": "ENCOUNT", "url": "https://encount.press/feed/"},
     {"name": "音楽ナタリー", "url": "https://natalie.mu/music/feed/news"},
     {"name": "映画ナタリー", "url": "https://natalie.mu/eiga/feed/news"},

@@ -198,9 +198,7 @@ def render_html(by_genre: dict, failures: list, updated_at) -> str:
             )
         style = "" if i == 0 else ' style="display:none"'
         panels.append(f'<div class="panel" data-g="{i}"{style}>' + "".join(cards) + "</div>")
-    fail_html = ""
-    if failures:
-        fail_html = '<div class="fail">取得失敗: ' + esc(", ".join(failures)) + "</div>"
+    # 取得失敗はページには出さない(ログにのみ出力)。failures は診断用に受け取るだけ
     return f"""<!DOCTYPE html>
 <html lang="ja"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -234,7 +232,6 @@ body{{background:#000;color:#eee}}header,.tabs{{background:#1c1c1e;border-color:
 <header><h1>毎日ニュース</h1><div class="updated">最終更新: {updated_at.strftime('%Y-%m-%d %H:%M')}</div></header>
 <div class="tabs">{tabs}</div>
 {''.join(panels)}
-{fail_html}
 <script>
 function show(i){{
   document.querySelectorAll('.panel').forEach(p=>p.style.display=(p.dataset.g==i)?'grid':'none');

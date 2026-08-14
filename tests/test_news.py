@@ -216,8 +216,18 @@ def test_render_html_contains_core_elements():
     assert "NHK主要" in hml
     assert "国内一般" in hml
     assert "最終更新" in hml
-    assert "死んでる" in hml
     assert hml.strip().lower().startswith("<!doctype html>")
+
+
+def test_render_html_omits_failure_footer():
+    by_genre = {"国内一般": [{
+        "title": "見出し", "link": "https://example.com/a",
+        "summary": "概要", "published": datetime(2026, 8, 13, 9, 0),
+        "source": "NHK主要",
+    }]}
+    hml = news.render_html(by_genre, ["国内一般/落ちたソース"], datetime(2026, 8, 13, 9, 30))
+    assert "取得失敗" not in hml            # 失敗表示はページに出さない
+    assert "落ちたソース" not in hml
 
 
 def test_render_html_escapes_titles():
