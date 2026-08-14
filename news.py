@@ -5,7 +5,7 @@ import html as _html
 import urllib.request
 import webbrowser
 from concurrent.futures import ThreadPoolExecutor
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 
 import feedparser
 
@@ -28,7 +28,8 @@ def _to_dt(entry):
     t = entry.get("published_parsed") or entry.get("updated_parsed")
     if not t:
         return None
-    return datetime(*t[:6])
+    # feedparser の published_parsed は UTC。表示・並び替えを JST に統一する
+    return datetime(*t[:6]) + timedelta(hours=9)
 
 
 def parse_entries(content) -> list:
@@ -233,7 +234,7 @@ def _save_cache(path, cache, keep_links):
         pass
 
 
-def main():
+def main(open_browser=True):
     here = os.path.dirname(os.path.abspath(__file__))
     feeds = load_feeds(os.path.join(here, "feeds.json"))
     cache_path = os.path.join(here, "cache.json")
@@ -241,15 +242,18 @@ def main():
     by_genre, failures = collect(feeds, cache=cache)
     keep = {e["link"] for items in by_genre.values() for e in items if e.get("link")}
     _save_cache(cache_path, cache, keep)
-    hml = render_html(by_genre, failures, datetime.now())
+    now_jst = datetime.now(timezone(timedelta(hours=9)))
+    hml = render_html(by_genre, failures, now_jst)
     out = os.path.join(here, "news.html")
     with open(out, "w", encoding="utf-8") as f:
         f.write(hml)
     print(f"生成: {out}")
     if failures:
         print("取得失敗:", ", ".join(failures))
-    webbrowser.open("file://" + out.replace(os.sep, "/"))
+    if open_browser:
+        webbrowser.open("file://" + out.replace(os.sep, "/"))
 
 
 if __name__ == "__main__":
-    main()
+    import sys
+    main(open_browser="--no-browser" not in sys.argv)
