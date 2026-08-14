@@ -10,7 +10,13 @@ from datetime import datetime, timedelta, timezone
 import feedparser
 
 PER_GENRE = 30
-_UA = "Mozilla/5.0 (news-dashboard)"
+_UA = ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+       "(KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36")
+_HEADERS = {
+    "User-Agent": _UA,
+    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+    "Accept-Language": "ja,en-US;q=0.8,en;q=0.5",
+}
 
 
 def load_feeds(path: str) -> dict:
@@ -47,7 +53,7 @@ def parse_entries(content) -> list:
 
 
 def _download(url: str, timeout: int):
-    req = urllib.request.Request(url, headers={"User-Agent": _UA})
+    req = urllib.request.Request(url, headers=_HEADERS)
     with urllib.request.urlopen(req, timeout=timeout) as r:
         return r.read()
 
