@@ -1,0 +1,54 @@
+name: ニュースを生成してPagesへ公開
+
+on:
+  schedule:
+    # 毎日 6:00 / 12:00 / 18:00 JST(UTCで 21:00 / 03:00 / 09:00)
+    - cron: "0 21,3,9 * * *"
+  workflow_dispatch: {}
+  push:
+    branches: [main]
+
+# Pages へのデプロイに必要な権限
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# 同時実行は1つに(古い実行はキャンセルしない)
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build-deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: 依存インストール
+        run: pip install -r requirements.txt
+
+      - name: ニュースHTML生成
+        run: python news.py --no-browser
+
+      - name: 公開用サイトを準備(index.html として配置)
+        run: |
+          mkdir -p _site
+          cp news.html _site/index.html
+
+      - uses: actions/configure-pages@v5
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+      - name: Pagesへデプロイ
+        id: deploy
+        uses: actions/deploy-pages@v4
