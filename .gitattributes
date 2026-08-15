@@ -1,0 +1,3 @@
+# バッチファイルは必ずCRLFで取り出す。LFだとcmd.exeが行を区切れず
+# 「'd' is not recognized」のように壊れて起動できなくなる
+*.bat text eol=crlf
