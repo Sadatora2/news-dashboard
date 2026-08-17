@@ -109,6 +109,24 @@ def fetch_page_meta(url: str, timeout: int = 5):
         return ("", "")
 
 
+def _dedupe(items):
+    """同じ記事(同一URL または 同一タイトル)を1件にまとめる。"""
+    seen_links, seen_titles, out = set(), set(), []
+    for e in items:
+        link = e.get("link", "")
+        title = (e.get("title") or "").strip()
+        if link and link in seen_links:
+            continue
+        if title and title in seen_titles:
+            continue
+        if link:
+            seen_links.add(link)
+        if title:
+            seen_titles.add(title)
+        out.append(e)
+    return out
+
+
 def _diversify(items, limit):
     """新しい順を基本にしつつ、1ソースの独占を避けて上位 limit 件を選ぶ。"""
     ordered = sorted(items, key=lambda e: e["published"] or datetime.min, reverse=True)
@@ -145,7 +163,7 @@ def collect(feeds: dict, fetcher=fetch_feed, page_fetcher=fetch_page_meta, cache
                 e = dict(e)
                 e["source"] = src["name"]
                 items.append(e)
-        by_genre[genre] = _diversify(items, PER_GENRE)
+        by_genre[genre] = _diversify(_dedupe(items), PER_GENRE)
     # 表示する記事ごとにページから概要・画像を補完する(既知URLはキャッシュ利用)
     if cache is None:
         cache = {}

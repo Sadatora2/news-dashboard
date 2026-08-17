@@ -165,6 +165,22 @@ def test_collect_fills_image_and_empty_summary():
     assert items["既概要"]["image"] == "https://ex.com/pic.jpg"
 
 
+def test_collect_dedupes_same_article():
+    # 2ソースが同じ記事(同一URL・同一タイトル)を配信 → 1件にまとまる
+    feeds = {"国内一般": [{"name": "A", "url": "ua"}, {"name": "B", "url": "ub"}]}
+    art = {"title": "同じ記事", "link": "https://x/1", "summary": "",
+           "published": datetime(2026, 8, 10), "image": ""}
+    other = {"title": "別記事", "link": "https://x/2", "summary": "",
+             "published": datetime(2026, 8, 9), "image": ""}
+    def fake_fetcher(url, timeout=10):
+        return ([dict(art), dict(other)], True) if url == "ua" else ([dict(art)], True)
+    by_genre, _ = news.collect(feeds, fetcher=fake_fetcher,
+                               page_fetcher=lambda *a, **k: ("", ""))
+    titles = [e["title"] for e in by_genre["国内一般"]]
+    assert titles.count("同じ記事") == 1   # 重複は1件に集約
+    assert titles.count("別記事") == 1
+
+
 def test_collect_diversifies_sources():
     # A が新着大量、B は少数。多様化で少数ソースBも埋もれず全部入る
     n = news.PER_GENRE
