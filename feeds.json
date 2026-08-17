@@ -2,8 +2,7 @@
   "国内一般": [
     {"name": "NHK主要", "url": "https://www3.nhk.or.jp/rss/news/cat0.xml"},
     {"name": "NHK社会", "url": "https://www3.nhk.or.jp/rss/news/cat1.xml"},
-    {"name": "Yahoo主要", "url": "https://news.yahoo.co.jp/rss/topics/top-picks.xml"},
-    {"name": "朝日新聞", "url": "https://www.asahi.com/rss/asahi/newsheadlines.rdf"}
+    {"name": "Yahoo主要", "url": "https://news.yahoo.co.jp/rss/topics/top-picks.xml"}
   ],
   "経済・ビジネス": [
     {"name": "NHK経済", "url": "https://www3.nhk.or.jp/rss/news/cat5.xml"},
