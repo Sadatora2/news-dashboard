@@ -181,6 +181,20 @@ def test_collect_dedupes_same_article():
     assert titles.count("別記事") == 1
 
 
+def test_collect_dedupes_across_genres_general_yields():
+    # 同じ記事が「国内一般」と専門カテゴリの両方に来たら、専門側に残し国内一般から消す
+    art = {"title": "共通ニュース", "link": "https://x/1", "summary": "",
+           "published": datetime(2026, 8, 10), "image": ""}
+    feeds = {"国内一般": [{"name": "G", "url": "ug"}],
+             "経済・ビジネス": [{"name": "E", "url": "ue"}]}
+    def fake_fetcher(url, timeout=10):
+        return ([dict(art)], True)
+    by_genre, _ = news.collect(feeds, fetcher=fake_fetcher,
+                               page_fetcher=lambda *a, **k: ("", ""))
+    assert [e["title"] for e in by_genre["経済・ビジネス"]] == ["共通ニュース"]
+    assert by_genre["国内一般"] == []          # 総合側は専門側に譲る
+
+
 def test_collect_diversifies_sources():
     # A が新着大量、B は少数。多様化で少数ソースBも埋もれず全部入る
     n = news.PER_GENRE

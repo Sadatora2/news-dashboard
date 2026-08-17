@@ -150,7 +150,7 @@ def _diversify(items, limit):
 
 
 def collect(feeds: dict, fetcher=fetch_feed, page_fetcher=fetch_page_meta, cache=None):
-    by_genre = {}
+    pools = {}
     failures = []
     for genre, sources in feeds.items():
         items = []
@@ -163,7 +163,26 @@ def collect(feeds: dict, fetcher=fetch_feed, page_fetcher=fetch_page_meta, cache
                 e = dict(e)
                 e["source"] = src["name"]
                 items.append(e)
-        by_genre[genre] = _diversify(_dedupe(items), PER_GENRE)
+        pools[genre] = _dedupe(items)          # カテゴリー内の重複を除去
+    # カテゴリーをまたぐ重複を除去(総合「国内一般」は専門カテゴリーに譲る)
+    order = ([g for g in pools if g != "国内一般"]
+             + [g for g in pools if g == "国内一般"])
+    seen_links, seen_titles = set(), set()
+    for g in order:
+        kept = []
+        for e in pools[g]:
+            link = e.get("link", "")
+            title = (e.get("title") or "").strip()
+            if (link and link in seen_links) or (title and title in seen_titles):
+                continue
+            if link:
+                seen_links.add(link)
+            if title:
+                seen_titles.add(title)
+            kept.append(e)
+        pools[g] = kept
+    # 元のカテゴリー順を保ちつつ上位 PER_GENRE 件に絞る
+    by_genre = {genre: _diversify(pools[genre], PER_GENRE) for genre in feeds}
     # 表示する記事ごとにページから概要・画像を補完する(既知URLはキャッシュ利用)
     if cache is None:
         cache = {}
