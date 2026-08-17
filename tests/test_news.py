@@ -165,6 +165,25 @@ def test_collect_fills_image_and_empty_summary():
     assert items["既概要"]["image"] == "https://ex.com/pic.jpg"
 
 
+def test_dedupe_merges_similar_but_keeps_dated_series():
+    items = [
+        {"title": "速報 地震 震度3 津波の心配なし", "link": "l1", "summary": "",
+         "published": datetime(2026, 8, 10), "image": ""},
+        # 言い回し違いだが数字(3)一致 → 似た記事としてまとめる
+        {"title": "速報 地震 震度3 津波被害の心配なし", "link": "l2", "summary": "",
+         "published": datetime(2026, 8, 10), "image": ""},
+        {"title": "ロシア侵攻 8月8日の動き", "link": "l3", "summary": "",
+         "published": datetime(2026, 8, 8), "image": ""},
+        # 見出しは酷似だが数字(日付)が違う → 別記事として残す
+        {"title": "ロシア侵攻 8月7日の動き", "link": "l4", "summary": "",
+         "published": datetime(2026, 8, 7), "image": ""},
+    ]
+    out = news._dedupe(items)
+    titles = [e["title"] for e in out]
+    assert sum("地震" in t for t in titles) == 1     # 似た速報は1件に
+    assert sum("ロシア侵攻" in t for t in titles) == 2  # 日付違いは両方残る
+
+
 def test_collect_dedupes_same_article():
     # 2ソースが同じ記事(同一URL・同一タイトル)を配信 → 1件にまとまる
     feeds = {"国内一般": [{"name": "A", "url": "ua"}, {"name": "B", "url": "ub"}]}

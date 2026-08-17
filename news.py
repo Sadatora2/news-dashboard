@@ -2,12 +2,15 @@ import json
 import os
 import re
 import html as _html
+import difflib
 import urllib.request
 import webbrowser
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timedelta, timezone
 
 import feedparser
+
+_SIM_THRESHOLD = 0.82   # 見出し類似度(これ以上＋数字一致で「似た記事」とみなす)
 
 PER_GENRE = 30
 _UA = ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
@@ -109,20 +112,39 @@ def fetch_page_meta(url: str, timeout: int = 5):
         return ("", "")
 
 
+def _norm_title(t):
+    """比較用にタイトルから記号・空白を除いた正規化文字列を返す。"""
+    return re.sub(r'[\s【】「」\[\]（）()、。,.!?・…\-—"\'’”：:；;/｜|]', "", t or "")
+
+
 def _dedupe(items):
-    """同じ記事(同一URL または 同一タイトル)を1件にまとめる。"""
-    seen_links, seen_titles, out = set(), set(), []
+    """同じ記事や似た記事を1件にまとめる。
+    - 同一URL / 同一タイトル(正規化後)は重複
+    - 見出しの類似度が高く、かつ含まれる数字(日付・巻数等)も一致するものも重複扱い
+      (数字が違うものは日付違いの連載更新等とみなして残す)
+    """
+    seen_links, out, kept = set(), [], []
     for e in items:
         link = e.get("link", "")
-        title = (e.get("title") or "").strip()
+        nt = _norm_title((e.get("title") or "").strip())
         if link and link in seen_links:
             continue
-        if title and title in seen_titles:
+        digits = tuple(re.findall(r"\d+", nt))
+        is_dup = False
+        for knt, kdigits in kept:
+            if nt and nt == knt:
+                is_dup = True
+                break
+            if (nt and digits == kdigits
+                    and difflib.SequenceMatcher(None, knt, nt).ratio() >= _SIM_THRESHOLD):
+                is_dup = True
+                break
+        if is_dup:
             continue
         if link:
             seen_links.add(link)
-        if title:
-            seen_titles.add(title)
+        if nt:
+            kept.append((nt, digits))
         out.append(e)
     return out
 
