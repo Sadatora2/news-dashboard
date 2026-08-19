@@ -11,6 +11,7 @@ from datetime import datetime, timedelta, timezone
 import feedparser
 
 _SIM_THRESHOLD = 0.82   # 見出し類似度(これ以上＋数字一致で「似た記事」とみなす)
+MAX_AGE_DAYS = 7        # これより古い記事は表示しない(凍結したソース対策の自己修復)
 
 PER_GENRE = 30
 _UA = ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
@@ -174,6 +175,8 @@ def _diversify(items, limit):
 def collect(feeds: dict, fetcher=fetch_feed, page_fetcher=fetch_page_meta, cache=None):
     pools = {}
     failures = []
+    now_jst = datetime.now(timezone(timedelta(hours=9))).replace(tzinfo=None)
+    cutoff = now_jst - timedelta(days=MAX_AGE_DAYS)
     for genre, sources in feeds.items():
         items = []
         for src in sources:
@@ -181,10 +184,19 @@ def collect(feeds: dict, fetcher=fetch_feed, page_fetcher=fetch_page_meta, cache
             if not ok:
                 failures.append(f"{genre}/{src['name']}")
                 continue
+            src_items = []
             for e in entries:
                 e = dict(e)
                 e["source"] = src["name"]
-                items.append(e)
+                src_items.append(e)
+            dated = [e["published"] for e in src_items if e["published"]]
+            if dated and max(dated) < cutoff:   # 最新が古すぎる=更新停止(凍結)の疑い
+                failures.append(
+                    f"{genre}/{src['name']}(更新停止? 最新{max(dated):%Y-%m-%d})")
+            # 古すぎる記事は表示しない(凍結ソースが出す古いニュースを自動で落とす)
+            src_items = [e for e in src_items
+                         if e["published"] is None or e["published"] >= cutoff]
+            items.extend(src_items)
         pools[genre] = _dedupe(items)          # カテゴリー内の重複を除去
     # カテゴリーをまたぐ重複を除去(総合「国内一般」は専門カテゴリーに譲る)
     order = ([g for g in pools if g != "国内一般"]

@@ -1,10 +1,16 @@
 # tests/test_news.py
 import json
 from pathlib import Path
-from datetime import datetime
+from datetime import datetime, timedelta
 import sys
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 import news
+
+_NOW = datetime.now()          # 年齢フィルター(MAX_AGE_DAYS)を通る新しめの基準時刻
+
+
+def _recent(days=0, hours=0):
+    return _NOW - timedelta(days=days, hours=hours)
 
 
 def _fixture_text():
@@ -74,9 +80,9 @@ def test_collect_aggregates_sorts_and_tags_source():
     def fake_fetcher(url, timeout=10):
         if url == "u1":
             return ([{"title": "古い", "link": "l1", "summary": "",
-                      "published": datetime(2026, 8, 1)}], True)
+                      "published": _recent(days=2)}], True)
         return ([{"title": "新しい", "link": "l2", "summary": "",
-                  "published": datetime(2026, 8, 10)}], True)
+                  "published": _recent(hours=1)}], True)
     by_genre, failures = news.collect(feeds, fetcher=fake_fetcher,
                                       page_fetcher=lambda *a, **k: ("", ""))
     titles = [e["title"] for e in by_genre["国内一般"]]
@@ -88,7 +94,7 @@ def test_collect_aggregates_sorts_and_tags_source():
 def test_collect_records_failures_and_caps_per_genre():
     n = news.PER_GENRE
     many = [{"title": f"t{i}", "link": f"l{i}", "summary": "",
-             "published": datetime(2026, 8, i % 28 + 1)} for i in range(n + 10)]
+             "published": _recent(hours=i)} for i in range(n + 10)]
     feeds = {"IT・AI": [
         {"name": "多い", "url": "big"},
         {"name": "死んでる", "url": "dead"},
@@ -151,9 +157,9 @@ def test_collect_fills_image_and_empty_summary():
     def fake_fetcher(url, timeout=10):
         return ([
             {"title": "空概要", "link": "https://ex.com/empty", "summary": "",
-             "published": datetime(2026, 8, 2), "image": ""},
+             "published": _recent(hours=2), "image": ""},
             {"title": "既概要", "link": "https://ex.com/full", "summary": "元の概要",
-             "published": datetime(2026, 8, 1), "image": ""},
+             "published": _recent(hours=3), "image": ""},
         ], True)
     def fake_page(url, timeout=5):
         return ("補完概要", "https://ex.com/pic.jpg")
@@ -163,6 +169,24 @@ def test_collect_fills_image_and_empty_summary():
     assert items["既概要"]["summary"] == "元の概要"   # 既存は保持
     assert items["空概要"]["image"] == "https://ex.com/pic.jpg"  # 画像は付与
     assert items["既概要"]["image"] == "https://ex.com/pic.jpg"
+
+
+def test_collect_drops_old_articles_and_flags_stale_source():
+    old = datetime(2020, 1, 1)          # 明らかに古い(凍結ソース想定)
+    recent = datetime.now()             # 最近(実行時刻付近)
+    feeds = {"国内一般": [{"name": "古い源", "url": "uo"}, {"name": "新源", "url": "un"}]}
+    def fake_fetcher(url, timeout=10):
+        if url == "uo":
+            return ([{"title": "古記事", "link": "lo", "summary": "",
+                      "published": old, "image": ""}], True)
+        return ([{"title": "新記事", "link": "ln", "summary": "",
+                  "published": recent, "image": ""}], True)
+    by_genre, failures = news.collect(feeds, fetcher=fake_fetcher,
+                                      page_fetcher=lambda *a, **k: ("", ""))
+    titles = [e["title"] for e in by_genre["国内一般"]]
+    assert "古記事" not in titles                     # 古すぎる記事は表示しない
+    assert "新記事" in titles
+    assert any("古い源" in f for f in failures)        # 凍結ソースはログ用に記録
 
 
 def test_dedupe_merges_similar_but_keeps_dated_series():
@@ -188,9 +212,9 @@ def test_collect_dedupes_same_article():
     # 2ソースが同じ記事(同一URL・同一タイトル)を配信 → 1件にまとまる
     feeds = {"国内一般": [{"name": "A", "url": "ua"}, {"name": "B", "url": "ub"}]}
     art = {"title": "同じ記事", "link": "https://x/1", "summary": "",
-           "published": datetime(2026, 8, 10), "image": ""}
+           "published": _recent(hours=1), "image": ""}
     other = {"title": "別記事", "link": "https://x/2", "summary": "",
-             "published": datetime(2026, 8, 9), "image": ""}
+             "published": _recent(days=1), "image": ""}
     def fake_fetcher(url, timeout=10):
         return ([dict(art), dict(other)], True) if url == "ua" else ([dict(art)], True)
     by_genre, _ = news.collect(feeds, fetcher=fake_fetcher,
@@ -203,7 +227,7 @@ def test_collect_dedupes_same_article():
 def test_collect_dedupes_across_genres_general_yields():
     # 同じ記事が「国内一般」と専門カテゴリの両方に来たら、専門側に残し国内一般から消す
     art = {"title": "共通ニュース", "link": "https://x/1", "summary": "",
-           "published": datetime(2026, 8, 10), "image": ""}
+           "published": _recent(hours=1), "image": ""}
     feeds = {"国内一般": [{"name": "G", "url": "ug"}],
              "経済・ビジネス": [{"name": "E", "url": "ue"}]}
     def fake_fetcher(url, timeout=10):
@@ -218,10 +242,10 @@ def test_collect_diversifies_sources():
     # A が新着大量、B は少数。多様化で少数ソースBも埋もれず全部入る
     n = news.PER_GENRE
     a = [{"title": f"a{i}", "link": f"la{i}", "summary": "x",
-          "published": datetime(2026, 8, 20, 12, i % 60), "image": ""}
+          "published": _recent(hours=i), "image": ""}
          for i in range(n + 20)]
     b = [{"title": f"b{i}", "link": f"lb{i}", "summary": "x",
-          "published": datetime(2026, 8, 19, 12, i), "image": ""} for i in range(5)]
+          "published": _recent(days=5, hours=i), "image": ""} for i in range(5)]
     feeds = {"スポーツ": [{"name": "A", "url": "ua"}, {"name": "B", "url": "ub"}]}
     def fake_fetcher(url, timeout=10):
         return (a, True) if url == "ua" else (b, True)
@@ -237,7 +261,7 @@ def test_collect_uses_cache_and_skips_fetch():
     feeds = {"国内一般": [{"name": "S", "url": "u"}]}
     def fake_fetcher(url, timeout=10):
         return ([{"title": "記事", "link": "https://ex.com/a", "summary": "",
-                  "published": datetime(2026, 8, 1), "image": ""}], True)
+                  "published": _recent(days=1), "image": ""}], True)
     calls = []
     def counting_page(url, timeout=5):
         calls.append(url)
