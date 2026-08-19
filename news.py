@@ -304,11 +304,12 @@ body{{background:#000;color:#eee}}header,.tabs{{background:#1c1c1e;border-color:
 <div class="tabs">{tabs}</div>
 {''.join(panels)}
 <script>
-function show(i){{
+function show(i, scroll){{
   document.querySelectorAll('.panel').forEach(p=>p.style.display=(p.dataset.g==i)?'grid':'none');
   document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('active',t.dataset.g==i));
+  if(scroll!==false) window.scrollTo(0,0);   // タブ切替時は先頭に戻す
 }}
-show(0);
+show(0, false);
 </script></body></html>"""
 
 
