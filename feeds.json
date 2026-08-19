@@ -1,11 +1,11 @@
 {
   "国内一般": [
-    {"name": "NHK主要", "url": "https://www3.nhk.or.jp/rss/news/cat0.xml"},
-    {"name": "NHK社会", "url": "https://www3.nhk.or.jp/rss/news/cat1.xml"},
+    {"name": "NHK主要", "url": "https://www.nhk.or.jp/rss/news/cat0.xml"},
+    {"name": "NHK社会", "url": "https://www.nhk.or.jp/rss/news/cat1.xml"},
     {"name": "Yahoo主要", "url": "https://news.yahoo.co.jp/rss/topics/top-picks.xml"}
   ],
   "経済・ビジネス": [
-    {"name": "NHK経済", "url": "https://www3.nhk.or.jp/rss/news/cat5.xml"},
+    {"name": "NHK経済", "url": "https://www.nhk.or.jp/rss/news/cat5.xml"},
     {"name": "Yahoo経済", "url": "https://news.yahoo.co.jp/rss/topics/business.xml"},
     {"name": "ITmediaビジネス", "url": "https://rss.itmedia.co.jp/rss/2.0/business.xml"},
     {"name": "東洋経済", "url": "https://toyokeizai.net/list/feed/rss"}
@@ -21,7 +21,7 @@
     {"name": "ZDNet Japan", "url": "https://feeds.japan.zdnet.com/rss/zdnet/all.rdf"}
   ],
   "スポーツ": [
-    {"name": "NHKスポーツ", "url": "https://www3.nhk.or.jp/rss/news/cat7.xml"},
+    {"name": "NHKスポーツ", "url": "https://www.nhk.or.jp/rss/news/cat7.xml"},
     {"name": "Yahooスポーツ", "url": "https://news.yahoo.co.jp/rss/topics/sports.xml"},
     {"name": "ゲキサカ", "url": "https://web.gekisaka.jp/feed"},
     {"name": "サッカーキング", "url": "https://www.soccer-king.jp/feed"},
@@ -49,7 +49,7 @@
     {"name": "IGN Japan", "url": "https://jp.ign.com/feed.xml"}
   ],
   "海外・国際": [
-    {"name": "NHK国際", "url": "https://www3.nhk.or.jp/rss/news/cat6.xml"},
+    {"name": "NHK国際", "url": "https://www.nhk.or.jp/rss/news/cat6.xml"},
     {"name": "Yahoo国際", "url": "https://news.yahoo.co.jp/rss/topics/world.xml"}
   ]
 }
